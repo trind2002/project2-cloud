@@ -1,8 +1,15 @@
 import express from 'express';
 import bodyParser from 'body-parser';
-import {filterImageFromURL, deleteLocalFiles} from './util/util.js';
+import {filterImageFromURL, deleteLocalFiles} from '../util/util.js';
 
-
+function isValidUrl(string) {
+  try {
+    new URL(string);
+    return true;
+  } catch (err) {
+    return false;
+  }
+}
 
   // Init the Express application
   const app = express();
@@ -28,7 +35,27 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util.js';
   //   the filtered image file [!!TIP res.sendFile(filteredpath); might be useful]
 
     /**************************************************************************** */
+    app.get( "/filteredimage", async (req, res) => {     
+      const imageUrl = req.query.image_url;
+      if (!imageUrl) {
+        return res.status(400).json({message: 'image_url is not found'});
+      }
+      let isValid = false;
+      try {
+        new URL(imageUrl);
+        isValid = true;
+      } catch (err) {
+        isValid = false;
+      }
 
+      if (!isValid) {
+        return res.status(422).json({message: 'image_url is invalid'});
+      }
+      const imagesURL = await filterImageFromURL(req.query.image_url);
+      res.sendFile(imagesURL, () => {
+        deleteLocalFiles([imagesURL]);
+    });
+    } );
   //! END @TODO1
   
   // Root Endpoint
@@ -36,6 +63,8 @@ import {filterImageFromURL, deleteLocalFiles} from './util/util.js';
   app.get( "/", async (req, res) => {
     res.send("try GET /filteredimage?image_url={{}}")
   } );
+
+
   
 
   // Start the Server
